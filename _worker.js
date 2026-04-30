@@ -1,7 +1,7 @@
 ﻿const Version = '2026-04-17 01:57:56';
 const DEFAULT_STATIC_PAGES_URL = 'https://ranshen1209.github.io/edt-pages';
 import { connect } from 'cloudflare:sockets';
-import { compressedStaticPages } from './static-pages.js';
+import { compressedStaticPages, faviconPng } from './static-pages.js';
 let configJson, proxyIP = '', enabledSocks5Proxy = null, enabledGlobalSocks5Proxy = false, socks5Credential = '', parsedSocks5Address = {};
 let cachedProxyIP, cachedProxyResolutionList, cachedProxyIndex = 0, enabledProxyFallback = true, debugLogEnabled = false;
 let socks5Whitelist = ['*tapecontent.net', '*cloudatacdn.com', '*loadshare.org', '*cdn-centaurus.com', 'scholar.google.com'];
@@ -34,6 +34,10 @@ function staticPageHeaders() {
 
 function staticPageResponse(name, status = 200) {
 	return new Response(new Blob([decodeBase64Bytes(compressedStaticPages[name])]).stream().pipeThrough(new DecompressionStream('gzip')), { status, headers: staticPageHeaders() });
+}
+
+function faviconResponse() {
+	return new Response(decodeBase64Bytes(faviconPng), { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=3600', 'X-Content-Type-Options': 'nosniff' } });
 }
 
 function configuredStaticPagesUrl(env) {
@@ -106,6 +110,7 @@ export default {
 			return await handleXhttpRequest(request, userID);
 		} else {
 			if (url.protocol === 'http:') return Response.redirect(url.href.replace(`http://${url.hostname}`, `https://${url.hostname}`), 301);
+			if (requestPath === 'favicon.png' || requestPath === 'favicon.ico') return faviconResponse();
 			if (!adminPassword) return (await externalStaticPageResponse(env, 'noADMIN/', 404)) || staticPageResponse('noADMIN', 404);
 			if (env.KV && typeof env.KV.get === 'function') {
 				const caseSensitivePath = url.pathname.slice(1);
